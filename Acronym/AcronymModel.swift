@@ -16,10 +16,14 @@ protocol DataModelDelegate: class {
 }
 
 class AcronymModel {
-    
+
     private let url = "http://www.nactem.ac.uk/software/acromine/dictionary.py"
     
     weak var delegate: DataModelDelegate?
+    
+    var array = [String]() {
+        didSet { delegate?.didRecieveDataUpdate(data: array) }
+    }
     
     // Retrieve JSON W/ Search Pattern
     func request(acronym: String) {
@@ -40,6 +44,6 @@ class AcronymModel {
         for block in responses {
             array.append(block.1["lf"].stringValue)
         }
-        delegate?.didRecieveDataUpdate(data: array)
+        self.array = array
     }
 }
