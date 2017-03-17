@@ -7,17 +7,28 @@
 //
 
 import UIKit
-import Alamofire
 import SwiftyJSON
+import Alamofire
 
 // Delegate Pattern
 protocol DataModelDelegate: class {
     func didRecieveDataUpdate(data: [String])
 }
 
-class AcronymModel {
+// Switch Between Using URLSession & Alamofire
+enum Fetcher {
+    case Alamofire
+    case URLSession
+}
 
+class AcronymModel {
+    
+    // Set Fetcher Here (Default Is Alamofire)
+    let DWNLDR = Fetcher.Alamofire
+    
+    // Default URLS
     private let url = "http://www.nactem.ac.uk/software/acromine/dictionary.py"
+    private let requestUrl = "http://www.nactem.ac.uk/software/acromine/dictionary.py/get?sf="
     
     weak var delegate: DataModelDelegate?
     
@@ -25,14 +36,31 @@ class AcronymModel {
         didSet { delegate?.didRecieveDataUpdate(data: array) }
     }
     
-    // Retrieve JSON W/ Search Pattern
+    // Fetch JSON Using DWNLDR
     func request(acronym: String) {
-        Alamofire.request(url, parameters: ["sf": acronym], encoding: URLEncoding(destination: .methodDependent)).responseJSON { response in
-            switch response.result {
-            case .success(let value):
-                self.parse(json: JSON(value))
-            case .failure(let error):
-                print(error)
+        switch DWNLDR {
+        case .Alamofire:
+            Alamofire.request(url, parameters: ["sf": acronym], encoding: URLEncoding(destination: .methodDependent)).responseJSON { response in
+                switch response.result {
+                case .success(let value):
+                    self.parse(json: JSON(value))
+                case .failure(let error):
+                    print(error)
+                }
+            }
+        case .URLSession:
+            let urlString = URL(string: requestUrl+acronym)
+            if let url = urlString {
+                let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
+                    if error != nil {
+                        print(error!)
+                    } else {
+                        if let usableData = data {
+                            self.parse(json: JSON(usableData))
+                        }
+                    }
+                }
+                task.resume()
             }
         }
     }
